@@ -1,9 +1,10 @@
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::path::PathBuf;
 
 use anyhow::{bail, Context, Result};
 use clap::Parser;
+use indicatif::{ProgressBar, ProgressStyle};
 use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
 use zip::write::SimpleFileOptions;
@@ -64,6 +65,19 @@ fn main() -> Result<()> {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "archive".to_string());
         PathBuf::from(format!("{}.zip", dir_name))
+    });
+
+    // Resolve absolute output path for exclusion from the file list
+    let output_abs = fs::canonicalize(&output).unwrap_or_else(|_| {
+        // Output doesn't exist yet — resolve its parent and append the filename
+        let parent = output.parent().map(|p| {
+            if p.as_os_str().is_empty() {
+                std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+            } else {
+                fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf())
+            }
+        }).unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+        parent.join(output.file_name().unwrap_or(output.as_os_str()))
     });
 
     // Build overrides for default excludes and extra excludes
@@ -137,6 +151,17 @@ fn main() -> Result<()> {
             continue;
         }
 
+        // Skip the output zip file itself to avoid including it in the archive
+        if let Ok(canonical) = fs::canonicalize(path) {
+            if canonical == output_abs {
+                if cli.verbose {
+                    let rel = path.strip_prefix(&source).unwrap_or(path);
+                    eprintln!("  skip (output file) {}", rel.display());
+                }
+                continue;
+            }
+        }
+
         let rel = path
             .strip_prefix(&source)
             .context("Failed to compute relative path")?
@@ -168,7 +193,26 @@ fn main() -> Result<()> {
         .compression_method(CompressionMethod::Deflated)
         .compression_level(cli.level.map(|l| l as i64));
 
-    let mut buf = Vec::new();
+    // Calculate total bytes for progress tracking
+    let total_bytes: u64 = files
+        .iter()
+        .map(|rel| {
+            fs::metadata(source.join(rel))
+                .map(|m| m.len())
+                .unwrap_or(0)
+        })
+        .sum();
+
+    let pb = ProgressBar::new(total_bytes);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{msg} [{bar:30}] {bytes}/{total_bytes} ({bytes_per_sec})")
+            .unwrap()
+            .progress_chars("##-"),
+    );
+    pb.set_message("Compressing");
+
+    let mut buf = [0u8; 64 * 1024];
     for rel in &files {
         let full_path = source.join(rel);
 
@@ -179,18 +223,27 @@ fn main() -> Result<()> {
             .start_file(&zip_path, options)
             .with_context(|| format!("Failed to add file to archive: {}", zip_path))?;
 
-        buf.clear();
-        File::open(&full_path)
-            .and_then(|mut f| f.read_to_end(&mut buf))
+        let file = File::open(&full_path)
             .with_context(|| format!("Failed to read file: {}", full_path.display()))?;
+        let mut reader = BufReader::new(file);
 
-        zip_writer
-            .write_all(&buf)
-            .with_context(|| format!("Failed to write file to archive: {}", zip_path))?;
+        loop {
+            let n = reader
+                .read(&mut buf)
+                .with_context(|| format!("Failed to read file: {}", full_path.display()))?;
+            if n == 0 {
+                break;
+            }
+            zip_writer
+                .write_all(&buf[..n])
+                .with_context(|| format!("Failed to write file to archive: {}", zip_path))?;
+            pb.inc(n as u64);
+        }
     }
 
     zip_writer.finish().context("Failed to finalize zip archive")?;
 
+    pb.finish_with_message("Done");
     println!("Created {} with {} files", output.display(), files.len());
 
     Ok(())

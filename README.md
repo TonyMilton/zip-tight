@@ -79,9 +79,9 @@ ziptight --level 1
 
 ## How it works
 
-ZipTight walks the source directory using the [`ignore`](https://crates.io/crates/ignore) crate (from ripgrep), which provides Git-compatible `.gitignore` parsing with proper cascading at every directory depth. Files are compressed with deflate into a standard zip archive.
+ZipTight walks the source directory using the [`ignore`](https://crates.io/crates/ignore) crate (from ripgrep), which provides Git-compatible `.gitignore` parsing with proper cascading at every directory depth. Files are streamed in chunks and compressed with deflate into a standard zip archive, with a real-time progress bar showing bytes processed and throughput.
 
-By default, `.git/`, `node_modules/`, and `*.env` files are excluded at any depth. Symlinks to files are followed; symlinks to directories are skipped to avoid cycles.
+By default, `.git/`, `node_modules/`, and `*.env` files are excluded at any depth. The output zip file is automatically excluded if it resides within the source directory. Symlinks to files are followed; symlinks to directories are skipped to avoid cycles.
 
 ## License
 
