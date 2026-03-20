@@ -1,0 +1,11 @@
+[package]
+name = "ziptight"
+version = "0.1.0"
+edition = "2021"
+description = "A fast CLI zip archiver that respects .gitignore"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+ignore = "0.4"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+anyhow = "1"
