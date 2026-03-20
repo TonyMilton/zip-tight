@@ -56,6 +56,12 @@ ziptight --dry-run
 
 # See every file as it's processed
 ziptight --verbose
+
+# Use maximum compression
+ziptight --level 9
+
+# Use fastest compression
+ziptight --level 1
 ```
 
 ## Options
@@ -67,6 +73,7 @@ ziptight --verbose
 | `-e, --extra-exclude` | Additional glob patterns to exclude (repeatable) |
 | `--no-default-excludes` | Include `.git/`, `node_modules/`, and `*.env` |
 | `--no-gitignore` | Ignore `.gitignore` rules |
+| `-l, --level` | Deflate compression level 1-9 (1=fastest, 9=smallest, default: 6) |
 | `-v, --verbose` | Print each included file |
 | `--dry-run` | List files without creating a zip |
 

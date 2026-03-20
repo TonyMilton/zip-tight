@@ -38,6 +38,10 @@ struct Cli {
     /// List files that would be included without creating a zip
     #[arg(long)]
     dry_run: bool,
+
+    /// Deflate compression level (1-9, where 1=fastest, 9=smallest) [default: 6]
+    #[arg(short = 'l', long, value_parser = clap::value_parser!(u8).range(1..=9))]
+    level: Option<u8>,
 }
 
 fn main() -> Result<()> {
@@ -160,7 +164,9 @@ fn main() -> Result<()> {
     let zip_file = File::create(&output)
         .with_context(|| format!("Cannot create output file: {}", output.display()))?;
     let mut zip_writer = zip::ZipWriter::new(zip_file);
-    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+    let options = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .compression_level(cli.level.map(|l| l as i64));
 
     let mut buf = Vec::new();
     for rel in &files {
