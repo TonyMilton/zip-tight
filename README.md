@@ -4,37 +4,31 @@ An opinionated, fast CLI zip archiver that produces clean zip files from project
 
 ## Install
 
-### From GitHub Releases (prebuilt binaries)
-
-Download the latest binary for your platform from [Releases](https://github.com/TonyMilton/zip-tight/releases).
-
-**macOS / Linux:**
+### Quick install (macOS / Linux)
 
 ```sh
-# Example for macOS Apple Silicon — replace the URL for your platform
-curl -L https://github.com/TonyMilton/zip-tight/releases/latest/download/ziptight-v0.1.0-aarch64-apple-darwin.tar.gz | tar xz
-sudo mv ziptight /usr/local/bin/
+curl -sL https://raw.githubusercontent.com/TonyMilton/zip-tight/main/install.sh | bash
 ```
 
-If `/usr/local/bin` isn't in your PATH, add it to your shell profile:
+This detects your OS and architecture, downloads the latest binary to `~/.local/bin`, and updates your shell PATH if needed. After installing, restart your shell or run:
 
 ```sh
 # bash
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+source ~/.bashrc
 
-# zsh (macOS default)
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+# zsh
+source ~/.zshrc
 ```
-
-**Windows:**
-
-Download the `.zip` from the releases page, extract `ziptight.exe`, and add its location to your PATH via System > Environment Variables.
 
 ### From source
 
 ```sh
 cargo install --path .
 ```
+
+### Windows
+
+Download the `.zip` from the [Releases](https://github.com/TonyMilton/zip-tight/releases) page, extract `ziptight.exe`, and add its location to your PATH via System > Environment Variables.
 
 ## Usage
 
